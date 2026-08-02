@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>skharness — The Autocode Engine</title>
+  <meta name="description" content="The autocode engine. Give it a repo and a task; it runs the loop — assess → build → grade 1-5 → twin-gate (score==5 + CI green + coverage) → finalize/merge — in a lean, sandboxed context, and hands back a reviewed PR. One engine, two front doors: skos drives it, skcode codes with it.">
+
+  <!-- Canonical + Sitemap -->
+  <link rel="canonical" href="https://skharness.skworld.io/">
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="skharness — The Autocode Engine">
+  <meta property="og:description" content="Give it a repo and a task. It runs the loop — assess → build → grade → twin-gate → merge — in a lean sandbox, and returns a reviewed PR. One engine, two front doors.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://skharness.skworld.io/">
+  <meta property="og:site_name" content="skharness · SKWorld">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://skharness.skworld.io/og.png">
+  <meta property="og:image:secure_url" content="https://skharness.skworld.io/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="skharness — The Autocode Engine. assess → build → grade → twin-gate → merge. pip install skharness">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@smilinTux">
+  <meta name="twitter:title" content="skharness — The Autocode Engine">
+  <meta name="twitter:description" content="One engine, two front doors. The assess→build→grade→gate→merge loop, in a lean sandbox. skos drives it autonomously; skcode codes with it by hand.">
+  <meta name="twitter:image" content="https://skharness.skworld.io/og.png">
+  <meta name="twitter:image:alt" content="skharness — The Autocode Engine">
+  <meta name="twitter:creator" content="@smilinTux">
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#0a0a1a">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚙️</text></svg>">
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://smilintux.github.io/#organization",
+        "name": "smilinTux",
+        "url": "https://smilintux.github.io",
+        "sameAs": ["https://github.com/smilinTux"],
+        "description": "Sovereign AI infrastructure — building open, authentic, human-first technology. Home of the Pengu Empire.",
+        "foundingDate": "2024",
+        "knowsAbout": ["Sovereign AI", "Autonomous coding", "AI agent infrastructure", "CI gating", "Open source security"]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://skharness.skworld.io/#website",
+        "name": "skharness",
+        "url": "https://skharness.skworld.io",
+        "publisher": {"@id": "https://smilintux.github.io/#organization"},
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://skharness.skworld.io/#app",
+        "name": "skharness",
+        "alternateName": "The Autocode Engine",
+        "description": "The autocode engine. Input: a repo + a task. Output: a reviewed PR. It runs the loop — assess → build (Ralph loop) → grade 1-5 → twin-gate (score==5 + CI green + coverage) → finalize/merge — in a lean, sandboxed context that never sees the operator's personal graph. The single engine that skos (autonomous operator) and skcode (interactive human) both drive.",
+        "url": "https://skharness.skworld.io",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Linux, macOS",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        "license": "https://www.gnu.org/licenses/gpl-3.0.en.html",
+        "codeRepository": "https://github.com/smilinTux/skharness",
+        "softwareVersion": "0.3.1",
+        "downloadUrl": "https://pypi.org/project/skharness/",
+        "isPartOf": {"@type": "SoftwareApplication", "name": "SKWorld", "url": "https://skworld.io"},
+        "publisher": {"@id": "https://smilintux.github.io/#organization"}
+      }
+    ]
+  }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    /* ── Reset + tokens ───────────────────── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --gold:   #FFD700;
+      --pink:   #FF69B4;
+      --cyan:   #00FFFF;
+      --green:  #50fa7b;
+      --purple: #bd93f9;
+      --bg:     #0a0a0f;
+      --bg2:    #0f1020;
+      --card:   rgba(15, 16, 40, 0.7);
+      --border: rgba(255,215,0,0.15);
+      --text:   rgba(255,255,255,0.88);
+      --dim:    rgba(255,255,255,0.55);
+      --mono:   'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── Starfield background ─────────────── */
+    .starfield {
+      position: fixed; inset: 0; z-index: -1;
+      background: radial-gradient(ellipse at 50% -10%, #1a1a3e 0%, #0d0d1f 40%, #0a0a0f 100%);
+    }
+    .stars {
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(2px 2px at 20px 30px,  rgba(255,215,0,0.9),  transparent),
+        radial-gradient(2px 2px at 40px 70px,  rgba(0,255,255,0.7),  transparent),
+        radial-gradient(1px 1px at 90px 40px,  rgba(255,255,255,0.9),transparent),
+        radial-gradient(1px 1px at 130px 80px, rgba(255,105,180,0.8),transparent),
+        radial-gradient(2px 2px at 160px 30px, rgba(255,255,255,0.6),transparent),
+        radial-gradient(1px 1px at 70px 55px,  rgba(189,147,249,0.7),transparent);
+      background-repeat: repeat;
+      background-size: 200px 100px;
+      animation: starscroll 100s linear infinite;
+    }
+    .stars:nth-child(2) { background-size: 270px 130px; animation-duration: 145s; animation-direction: reverse; opacity: .7; }
+    .stars:nth-child(3) { background-size: 340px 165px; animation-duration: 190s; opacity: .45; }
+    @keyframes starscroll {
+      from { transform: translateX(0)      translateY(0); }
+      to   { transform: translateX(-200px) translateY(-100px); }
+    }
+
+    /* ── Floating deco ────────────────────── */
+    .float-deco {
+      position: fixed; font-size: 1.6rem; z-index: 0; pointer-events: none;
+      animation: floatDeco 18s infinite ease-in-out;
+      opacity: .35;
+    }
+    @keyframes floatDeco {
+      0%,100% { transform: translateY(0) rotate(-4deg); opacity: .3; }
+      33%  { transform: translateY(-28px) rotate(6deg); opacity: .6; }
+      66%  { transform: translateY(-48px) rotate(-2deg); opacity: .45; }
+    }
+
+    /* ── Layout helpers ───────────────────── */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+    section { padding: 5rem 0; }
+
+    /* ── Sticky nav ───────────────────────── */
+    .site-nav {
+      position: sticky; top: 0; z-index: 200;
+      background: rgba(10, 10, 20, 0.88);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255,215,0,0.12);
+    }
+    .nav-inner {
+      display: flex; justify-content: space-between; align-items: center;
+      max-width: 1200px; margin: 0 auto; padding: .75rem 2rem;
+    }
+    .nav-logo {
+      font-family: var(--mono); font-weight: 700; font-size: 1.25rem;
+      color: var(--gold); text-decoration: none; letter-spacing: -.5px;
+    }
+    .nav-logo span { color: var(--cyan); }
+    .nav-links { display: flex; list-style: none; gap: 1.4rem; align-items: center; }
+    .nav-links a {
+      color: var(--dim); text-decoration: none; font-size: .875rem;
+      font-weight: 500; transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--gold); }
+    .nav-cta {
+      background: linear-gradient(135deg, var(--gold), var(--pink));
+      color: #000 !important; padding: .45rem 1.2rem; border-radius: 6px;
+      font-weight: 700 !important; font-size: .85rem !important;
+    }
+    .nav-cta:hover { opacity: .85; }
+    @media (max-width: 900px) { .nav-links { display: none; } }
+
+    /* ── Cross-site sibling nav (the family) ─ */
+    .sibling-bar {
+      background: rgba(6, 6, 14, 0.9);
+      border-bottom: 1px solid rgba(255,215,0,0.08);
+      backdrop-filter: blur(18px);
+      position: sticky; top: 0; z-index: 210;
+    }
+    .sibling-inner {
+      display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+      max-width: 1200px; margin: 0 auto; padding: .5rem 2rem;
+      font-size: .78rem;
+    }
+    .sibling-label {
+      font-family: var(--mono); font-size: .68rem; letter-spacing: .12em;
+      text-transform: uppercase; color: rgba(255,255,255,.35); margin-right: .35rem;
+    }
+    .sibling-link {
+      display: inline-flex; align-items: center; gap: .4rem;
+      text-decoration: none; color: var(--dim);
+      border: 1px solid rgba(255,255,255,.1); border-radius: 20px;
+      padding: .25rem .8rem; font-size: .78rem; font-weight: 500;
+      transition: all .2s;
+    }
+    .sibling-link .role { color: rgba(255,255,255,.32); font-size: .68rem; font-family: var(--mono); }
+    .sibling-link:hover { border-color: var(--cyan); color: var(--cyan); }
+    .sibling-link.active {
+      border-color: rgba(255,215,0,.5); color: var(--gold);
+      background: rgba(255,215,0,.07); font-weight: 700; cursor: default;
+    }
+    .sibling-link.active .role { color: rgba(255,215,0,.6); }
+    .sibling-sep { color: rgba(255,255,255,.18); }
+    @media (max-width: 640px) { .sibling-label, .sibling-sep { display: none; } .sibling-inner { padding: .5rem 1rem; } }
+
+    /* ── HERO ─────────────────────────────── */
+    .hero {
+      padding: 6rem 0 5rem;
+      text-align: center;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 50%, rgba(80,250,123,.07) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono); font-size: .9rem; color: var(--cyan);
+      letter-spacing: .15em; text-transform: uppercase; margin-bottom: 1.5rem;
+      display: inline-block;
+      animation: eyebrowPulse 4s ease-in-out infinite;
+    }
+    @keyframes eyebrowPulse {
+      0%,100% { text-shadow: 0 0 8px rgba(0,255,255,.4); }
+      50%      { text-shadow: 0 0 18px rgba(0,255,255,.8), 0 0 35px rgba(0,255,255,.3); }
+    }
+    .hero-title {
+      font-size: clamp(3.5rem, 8vw, 7rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: .75rem;
+      background: linear-gradient(140deg, var(--gold) 0%, var(--green) 35%, var(--cyan) 65%, var(--gold) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleShimmer 5s ease-in-out infinite;
+    }
+    @keyframes titleShimmer {
+      0%,100% { filter: hue-rotate(0deg); }
+      40%      { filter: hue-rotate(25deg); }
+      70%      { filter: hue-rotate(-15deg); }
+    }
+    .hero-tagline {
+      font-size: clamp(1.25rem, 2.5vw, 1.7rem);
+      color: rgba(255,255,255,.8);
+      font-weight: 300;
+      max-width: 720px;
+      margin: 0 auto 1rem;
+      line-height: 1.5;
+    }
+    .hero-tagline strong { color: var(--gold); font-weight: 600; }
+    .hero-sub {
+      font-size: 1rem; color: var(--dim);
+      max-width: 600px; margin: 0 auto 2.5rem;
+    }
+    .hero-loop {
+      font-family: var(--mono); font-size: .82rem; letter-spacing: .02em;
+      color: var(--dim); margin: 0 auto 2.5rem; max-width: 620px;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem .35rem;
+    }
+    .hero-loop b { color: var(--green); font-weight: 600; }
+    .hero-loop .arw { color: var(--gold); }
+
+    /* Install box */
+    .install-box-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: .75rem;
+      margin-bottom: 1.5rem;
+    }
+    .install-box {
+      display: flex; align-items: center; gap: 1rem;
+      background: rgba(0,0,0,.7);
+      border: 1.5px solid rgba(255,215,0,.45);
+      border-radius: 12px;
+      padding: 1rem 1.4rem;
+      max-width: 560px; width: 100%;
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .install-box:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 28px rgba(255,215,0,.25);
+    }
+    .install-cmd {
+      font-family: var(--mono); font-size: .95rem; color: var(--green);
+      flex: 1; text-align: left; word-break: break-all;
+    }
+    .install-cmd .prompt { color: rgba(255,255,255,.35); }
+    .copy-btn {
+      background: none; border: 1px solid rgba(255,215,0,.4);
+      color: var(--gold); border-radius: 6px; padding: .3rem .7rem;
+      font-size: .8rem; font-family: var(--mono); cursor: pointer;
+      transition: all .2s; white-space: nowrap;
+    }
+    .copy-btn:hover { background: rgba(255,215,0,.1); border-color: var(--gold); }
+    .copy-btn.copied { color: var(--green); border-color: var(--green); background: rgba(80,250,123,.1); }
+    .install-sub { font-size: .85rem; color: var(--dim); text-align: center; }
+    .install-sub a { color: var(--cyan); text-decoration: none; }
+
+    /* Hero CTAs */
+    .hero-ctas {
+      display: flex; justify-content: center; gap: 1rem;
+      flex-wrap: wrap; margin-top: 1rem;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      padding: .8rem 1.8rem; border-radius: 10px;
+      font-weight: 600; font-size: .95rem; text-decoration: none;
+      transition: all .25s; position: relative; overflow: hidden;
+      border: none; cursor: pointer;
+    }
+    .btn::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+      transform: translateX(-100%); transition: transform .5s;
+    }
+    .btn:hover::after { transform: translateX(100%); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold) 0%, var(--green) 70%);
+      color: #000;
+      box-shadow: 0 4px 20px rgba(80,250,123,.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(80,250,123,.5); }
+    .btn-outline {
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,215,0,.3);
+      color: rgba(255,255,255,.85);
+    }
+    .btn-outline:hover { border-color: var(--gold); background: rgba(255,215,0,.07); transform: translateY(-2px); }
+    .btn-ghost {
+      background: transparent; border: 1.5px solid rgba(255,255,255,.15);
+      color: var(--dim);
+    }
+    .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); transform: translateY(-2px); }
+
+    /* Trust badges under hero */
+    .hero-trust {
+      display: flex; justify-content: center; gap: 2rem;
+      flex-wrap: wrap; margin-top: 3rem;
+      font-size: .82rem; color: var(--dim);
+    }
+    .hero-trust span { display: flex; align-items: center; gap: .4rem; }
+    .hero-trust strong { color: rgba(255,255,255,.7); }
+
+    /* ── FRONT DOORS — tier cards ─────────── */
+    .tiers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .tier-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 2rem;
+      transition: all .35s;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      display: flex; flex-direction: column;
+    }
+    .tier-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+    }
+    .tier-card.os::before     { background: linear-gradient(90deg, #4a90d9, var(--cyan)); }
+    .tier-card.engine::before { background: linear-gradient(90deg, var(--green), var(--gold)); }
+    .tier-card.client::before { background: linear-gradient(90deg, var(--purple), var(--pink)); }
+    .tier-card.engine {
+      border-color: rgba(80,250,123,.4);
+      box-shadow: 0 0 40px rgba(80,250,123,.08);
+    }
+    .tier-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 50px rgba(0,0,0,.4), 0 0 35px rgba(80,250,123,.12);
+    }
+    .tier-badge {
+      display: inline-block;
+      font-family: var(--mono); font-size: .7rem; font-weight: 700;
+      padding: .2rem .6rem; border-radius: 4px;
+      text-transform: uppercase; letter-spacing: .1em;
+      margin-bottom: 1rem; align-self: flex-start;
+    }
+    .tier-badge.os     { background: rgba(0,255,255,.1);  color: var(--cyan);  border: 1px solid rgba(0,255,255,.3); }
+    .tier-badge.engine { background: rgba(80,250,123,.12); color: var(--green); border: 1px solid rgba(80,250,123,.35); }
+    .tier-badge.client { background: rgba(189,147,249,.12); color: var(--purple); border: 1px solid rgba(189,147,249,.3); }
+    .tier-icon { font-size: 2.5rem; margin-bottom: .8rem; display: block; }
+    .tier-title { font-size: 1.4rem; font-weight: 700; margin-bottom: .35rem; color: #fff; }
+    .tier-host { font-family: var(--mono); font-size: .72rem; color: var(--dim); margin-bottom: .75rem; }
+    .tier-desc  { font-size: .925rem; color: var(--dim); line-height: 1.6; margin-bottom: 1.2rem; }
+    .tier-list  { list-style: none; margin-bottom: 1.25rem; }
+    .tier-list li {
+      font-size: .875rem; color: rgba(255,255,255,.65);
+      padding: .35rem 0 .35rem 1.6rem; position: relative;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .tier-list li:last-child { border-bottom: none; }
+    .tier-list li::before {
+      content: '▸'; position: absolute; left: 0;
+      color: var(--gold); font-size: .75rem;
+    }
+    .tier-foot { margin-top: auto; }
+    .tier-cta {
+      display: inline-flex; align-items: center; gap: .4rem;
+      font-size: .82rem; font-family: var(--mono); text-decoration: none;
+      color: var(--cyan); border: 1px solid rgba(0,255,255,.25);
+      border-radius: 8px; padding: .4rem .8rem; transition: all .2s;
+    }
+    .tier-cta:hover { border-color: var(--cyan); background: rgba(0,255,255,.06); }
+    .tier-cta.here { color: var(--green); border-color: rgba(80,250,123,.3); cursor: default; }
+
+    /* ── ARCHITECTURE / THE LOOP ──────────── */
+    .arch-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;
+    }
+    @media (max-width: 860px) { .arch-wrap { grid-template-columns: 1fr; } }
+    .arch-text h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 800; margin-bottom: 1rem; }
+    .arch-text p  { color: var(--dim); line-height: 1.75; margin-bottom: 1rem; }
+    .arch-text p strong { color: rgba(255,255,255,.85); }
+    .arch-pills {
+      display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.5rem;
+    }
+    .arch-pill {
+      font-family: var(--mono); font-size: .78rem;
+      padding: .3rem .75rem; border-radius: 20px;
+      border: 1px solid rgba(255,215,0,.25); color: var(--gold);
+      background: rgba(255,215,0,.06);
+    }
+    .arch-diagram {
+      background: rgba(0,0,0,.5);
+      border: 1px solid rgba(80,250,123,.22);
+      border-radius: 16px; padding: 2rem;
+      font-family: var(--mono); font-size: .78rem; line-height: 1.8;
+    }
+    .arch-diagram .d-label {
+      color: var(--cyan); font-weight: 700; font-size: .82rem;
+      margin-bottom: .5rem; display: block;
+    }
+    .arch-diagram .d-row { color: rgba(255,255,255,.6); display:flex; gap:.6rem; align-items:baseline; }
+    .arch-diagram .d-row .n { color: var(--gold); font-weight:700; }
+    .arch-diagram .d-row .k { color: var(--green); font-weight:600; min-width: 5.5rem; display:inline-block; }
+    .arch-diagram .d-row em { color: rgba(255,255,255,.45); font-style: normal; }
+    .arch-diagram hr { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: .8rem 0; }
+    .arch-diagram .loopback { color: var(--pink); font-size: .73rem; margin-top:.6rem; }
+
+    /* ── section headings ─────────────────── */
+    .section-eyebrow {
+      font-family: var(--mono); font-size: .8rem; color: var(--cyan);
+      letter-spacing: .15em; text-transform: uppercase; margin-bottom: .75rem;
+    }
+    .section-title {
+      font-size: clamp(1.9rem, 3.5vw, 2.8rem); font-weight: 800;
+      margin-bottom: .75rem; line-height: 1.15;
+    }
+    .section-sub { color: var(--dim); max-width: 640px; font-size: 1rem; line-height: 1.7; }
+
+    /* ── TWO PLANES ───────────────────────── */
+    .planes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.4rem; margin-top: 3rem;
+    }
+    .c-card {
+      background: var(--card); backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border); border-radius: 16px;
+      padding: 1.75rem; transition: all .3s;
+    }
+    .c-card:hover { transform: translateY(-6px); border-color: rgba(80,250,123,.35); box-shadow: 0 16px 40px rgba(0,0,0,.35); }
+    .c-card-head {
+      display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem;
+    }
+    .c-icon { font-size: 2rem; }
+    .c-label { font-family: var(--mono); font-size: .7rem; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; }
+    .c-name  { font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: .05rem; }
+    .c-ports { display: flex; flex-direction: column; gap: .5rem; }
+    .port-row {
+      display: flex; align-items: baseline; justify-content: space-between; gap: .5rem;
+    }
+    .port-name {
+      font-family: var(--mono); font-size: .8rem; color: var(--gold);
+      font-weight: 500; white-space: nowrap;
+    }
+    .port-desc { font-size: .8rem; color: var(--dim); text-align: right; }
+    .port-gap  { font-size: .7rem; color: var(--pink); margin-left: .3rem; }
+
+    /* adapters row */
+    .adapters-row { margin-top: 2.5rem; text-align:center; }
+    .standards-grid {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 1rem; margin-top: 1.25rem;
+    }
+    .std-pill {
+      display: flex; align-items: center; gap: .5rem;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px; padding: .6rem 1.2rem;
+      font-family: var(--mono); font-size: .82rem; color: rgba(255,255,255,.7);
+      transition: all .2s;
+    }
+    .std-pill:hover { border-color: var(--cyan); color: var(--cyan); background: rgba(0,255,255,.05); }
+
+    /* ── LEAN SANDBOX (in/out) ────────────── */
+    .sandbox-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem;
+    }
+    @media (max-width: 760px) { .sandbox-grid { grid-template-columns: 1fr; } }
+    .sb-card {
+      border-radius: 16px; padding: 1.75rem;
+      background: var(--card); backdrop-filter: blur(12px);
+      border: 1.5px solid var(--border);
+    }
+    .sb-card.in  { border-color: rgba(80,250,123,.3); }
+    .sb-card.out { border-color: rgba(255,105,180,.3); }
+    .sb-head { font-family: var(--mono); font-size: .8rem; letter-spacing:.08em; text-transform: uppercase; margin-bottom: 1rem; }
+    .sb-card.in  .sb-head { color: var(--green); }
+    .sb-card.out .sb-head { color: var(--pink); }
+    .sb-list { list-style: none; }
+    .sb-list li { font-size: .875rem; color: rgba(255,255,255,.7); padding: .4rem 0 .4rem 1.7rem; position: relative; border-bottom: 1px solid rgba(255,255,255,.05); }
+    .sb-list li:last-child { border-bottom: none; }
+    .sb-card.in  .sb-list li::before { content:'✓'; position:absolute; left:0; color: var(--green); font-weight:700; }
+    .sb-card.out .sb-list li::before { content:'✕'; position:absolute; left:0; color: var(--pink); font-weight:700; }
+
+    /* ── ECOSYSTEM ────────────────────────── */
+    .eco-grid {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+      justify-content: center; margin-top: 2rem;
+    }
+    .eco-link {
+      display: inline-flex; align-items: center; gap: .45rem;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,215,0,.18);
+      border-radius: 24px; padding: .55rem 1.2rem;
+      font-size: .875rem; font-weight: 500;
+      color: rgba(255,255,255,.75); text-decoration: none;
+      transition: all .25s;
+    }
+    .eco-link:hover {
+      border-color: var(--gold); color: var(--gold);
+      background: rgba(255,215,0,.07); transform: translateY(-2px);
+    }
+
+    /* ── SECTION DIVIDERS ─────────────────── */
+    .section-divider { border: none; border-top: 1px solid rgba(255,215,0,.08); margin: 0; }
+
+    /* ── GRADIENT SECTION ─────────────────── */
+    .gradient-section {
+      background: linear-gradient(135deg, rgba(80,250,123,.05) 0%, rgba(0,255,255,.04) 50%, rgba(189,147,249,.05) 100%);
+      border-top: 1px solid rgba(255,215,0,.08);
+      border-bottom: 1px solid rgba(255,215,0,.08);
+    }
+
+    /* ── TERMINAL DEMO ────────────────────── */
+    .terminal {
+      background: #050508; border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; overflow: hidden; max-width: 760px; margin: 2.5rem auto 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    }
+    .term-bar {
+      background: #1a1a2e; padding: .6rem 1rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .term-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .term-dot.r { background: #ff5f57; }
+    .term-dot.y { background: #febc2e; }
+    .term-dot.g { background: #28c840; }
+    .term-title { font-family: var(--mono); font-size: .78rem; color: var(--dim); margin-left: auto; }
+    .term-body { padding: 1.5rem; font-family: var(--mono); font-size: .85rem; line-height: 1.9; text-align: left; }
+    .t-prompt { color: var(--green); }
+    .t-cmd    { color: #fff; }
+    .t-comment{ color: rgba(255,255,255,.3); }
+    .t-out    { color: var(--dim); }
+    .t-bold   { color: var(--gold); font-weight: 700; }
+    .t-cyan   { color: var(--cyan); }
+    .t-green  { color: var(--green); }
+    .t-pink   { color: var(--pink); }
+
+    /* ── FINAL CTA ────────────────────────── */
+    .cta-section {
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 100%, rgba(80,250,123,.06) 0%, transparent 65%);
+    }
+    .cta-section h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); font-weight: 800; margin-bottom: 1rem; }
+
+    /* ── FOOTER ───────────────────────────── */
+    .site-footer {
+      padding: 2.5rem 0;
+      border-top: 1px solid rgba(255,215,0,.12);
+      background: rgba(0,0,0,.4);
+    }
+    .footer-inner { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+    .footer-links {
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem 1.5rem;
+    }
+    .footer-links a {
+      color: var(--dim); text-decoration: none; font-size: .875rem; transition: color .2s;
+    }
+    .footer-links a:hover { color: var(--gold); }
+    .footer-copy {
+      font-family: var(--mono); font-size: .8rem;
+      color: rgba(255,255,255,.3); text-align: center;
+    }
+    .footer-copy span { color: var(--gold); }
+    .footer-copy a { color: var(--dim); text-decoration: none; }
+    .footer-copy a:hover { color: var(--gold); }
+
+    /* ── Responsive tweaks ─────────────────── */
+    @media (max-width: 640px) {
+      section { padding: 3.5rem 0; }
+      .container { padding: 0 1rem; }
+      .hero { padding: 4rem 0 3rem; }
+      .install-box { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ── Scroll reveal animation ─────────── */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── WHERE YOU ARE band ──────────────── */
+    .vertical-band {
+      background: linear-gradient(135deg,
+        rgba(80,250,123,.07) 0%,
+        rgba(0,255,255,.05) 45%,
+        rgba(189,147,249,.06) 100%);
+      border-top: 1px solid rgba(255,215,0,.18);
+      border-bottom: 1px solid rgba(255,215,0,.18);
+      position: relative; overflow: hidden;
+    }
+    .vertical-band::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(80,250,123,.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .vertical-band-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+    .vertical-kicker {
+      font-family: var(--mono); font-size: .8rem;
+      letter-spacing: .18em; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 1.25rem; display: inline-block;
+    }
+    .vertical-headline {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800; line-height: 1.1; margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--green) 45%, var(--cyan) 85%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .vertical-manifesto {
+      font-size: 1.05rem; color: rgba(255,255,255,.75);
+      line-height: 1.75; max-width: 700px; margin: 0 auto 2rem;
+    }
+    .vertical-manifesto strong { color: var(--gold); }
+    .vertical-stack {
+      display: flex; flex-direction: column; gap: 0;
+      max-width: 720px; margin: 0 auto 2rem;
+      border: 1px solid rgba(255,215,0,.15); border-radius: 14px; overflow: hidden;
+    }
+    .vs-row {
+      display: grid; grid-template-columns: 1.1fr 1.6fr 1.3fr;
+      gap: 0; padding: .65rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      transition: background .2s; text-align: left;
+    }
+    .vs-row:last-child { border-bottom: none; }
+    .vs-row:hover { background: rgba(80,250,123,.06); }
+    .vs-row.keystone {
+      background: linear-gradient(90deg, rgba(80,250,123,.14) 0%, rgba(0,255,255,.08) 100%);
+      border-left: 3px solid var(--green);
+    }
+    .vs-row.keystone:hover { background: linear-gradient(90deg, rgba(80,250,123,.2) 0%, rgba(0,255,255,.12) 100%); }
+    .vs-layer  { font-family: var(--mono); font-size: .78rem; color: var(--gold); font-weight: 700; align-self: center; }
+    .vs-what   { font-size: .82rem; color: rgba(255,255,255,.65); align-self: center; padding: 0 .5rem; }
+    .vs-product{ font-family: var(--mono); font-size: .75rem; color: var(--cyan); align-self: center; }
+    .vs-row.keystone .vs-layer  { color: var(--green); }
+    .vs-row.keystone .vs-product{ color: var(--green); }
+    .vs-stack-header {
+      display: grid; grid-template-columns: 1.1fr 1.6fr 1.3fr;
+      gap: 0; padding: .5rem 1.25rem;
+      background: rgba(255,215,0,.06);
+      border-bottom: 1px solid rgba(255,215,0,.18);
+    }
+    .vs-stack-header span {
+      font-family: var(--mono); font-size: .7rem;
+      color: var(--dim); letter-spacing: .1em; text-transform: uppercase;
+    }
+    .vertical-cta-row { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: .5rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Starfield -->
+  <div class="starfield" aria-hidden="true">
+    <div class="stars"></div>
+    <div class="stars"></div>
+    <div class="stars"></div>
+  </div>
+
+  <!-- Floating decorations -->
+  <div class="float-deco" style="top:18%;left:4%;animation-delay:0s">⚙️</div>
+  <div class="float-deco" style="top:35%;right:5%;animation-delay:4s">🔁</div>
+  <div class="float-deco" style="top:65%;left:2.5%;animation-delay:8s">📦</div>
+  <div class="float-deco" style="top:80%;right:9%;animation-delay:6s">✅</div>
+
+  <!-- ── CROSS-SITE SIBLING NAV ───────────────── -->
+  <div class="sibling-bar" role="navigation" aria-label="SKWorld coding family">
+    <div class="sibling-inner">
+      <span class="sibling-label">One engine, two front doors:</span>
+      <a class="sibling-link" href="https://skos.skworld.io/">🧠 skos <span class="role">operator OS</span></a>
+      <span class="sibling-sep">·</span>
+      <a class="sibling-link active" href="https://skharness.skworld.io/" aria-current="page">⚙️ skharness <span class="role">engine</span></a>
+      <span class="sibling-sep">·</span>
+      <a class="sibling-link" href="https://skcode.skworld.io/">⌨️ skcode <span class="role">coding client</span></a>
+    </div>
+  </div>
+
+  <!-- ── NAV ─────────────────────────────────── -->
+  <nav class="site-nav" role="navigation" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="https://skharness.skworld.io/" class="nav-logo">⚙️ <span>sk</span>harness</a>
+      <ul class="nav-links">
+        <li><a href="#front-doors">Two doors</a></li>
+        <li><a href="#the-loop">The loop</a></li>
+        <li><a href="#planes">Two planes</a></li>
+        <li><a href="#sandbox">Lean sandbox</a></li>
+        <li><a href="/docs.html">Docs</a></li>
+        <li><a href="https://skworld.io">SKWorld</a></li>
+        <li><a href="https://github.com/smilinTux/skharness" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="/docs.html" class="nav-cta">Get started →</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ── HERO ─────────────────────────────────── -->
+  <header class="hero" id="top">
+    <div class="container">
+      <div class="hero-eyebrow" aria-label="Product category">The Autocode Engine · smilinTux ecosystem</div>
+
+      <h1 class="hero-title">skharness</h1>
+
+      <p class="hero-tagline">
+        <strong>Give it a repo and a task.</strong><br>
+        It runs the loop, and hands back a reviewed PR.
+      </p>
+
+      <p class="hero-sub">
+        skharness is the single autocode engine. It builds in a <strong style="color:var(--green)">lean, sandboxed
+        context</strong> — the repo, the task brief, and repo-grounded facts, nothing else. It never sees your
+        personal graph. One engine, two front doors: <strong style="color:var(--cyan)">skos</strong> drives it
+        autonomously, <strong style="color:var(--purple)">skcode</strong> drives it by hand.
+      </p>
+
+      <div class="hero-loop" aria-label="The autocode loop">
+        <b>assess</b> <span class="arw">→</span> <b>build</b> <span class="t-comment">(Ralph loop)</span>
+        <span class="arw">→</span> <b>grade&nbsp;1-5</b>
+        <span class="arw">→</span> <b>twin-gate</b> <span class="t-comment">(score==5 · CI&nbsp;green · coverage)</span>
+        <span class="arw">→</span> <b>finalize&nbsp;/&nbsp;merge</b>
+      </div>
+
+      <!-- Install box -->
+      <div class="install-box-wrap">
+        <div class="install-box" role="group" aria-label="Installation command">
+          <code class="install-cmd" id="install-cmd-text"><span class="prompt">$ </span>pip install skharness</code>
+          <button class="copy-btn" id="copy-btn" onclick="copyInstall()" aria-label="Copy install command">
+            copy
+          </button>
+        </div>
+        <p class="install-sub">
+          Python 3.10+ · <code style="color:var(--gold);font-family:var(--mono)">skharness</code> on PyPI (v0.3.1) · GPL-3.0.
+          <a href="https://pypi.org/project/skharness/" target="_blank" rel="noopener">PyPI ↗</a> ·
+          <a href="/docs.html">Read the docs ↗</a>
+        </p>
+      </div>
+
+      <!-- CTAs -->
+      <div class="hero-ctas">
+        <a href="https://github.com/smilinTux/skharness" class="btn btn-primary" target="_blank" rel="noopener">
+          ⭐ Star on GitHub
+        </a>
+        <a href="#the-loop" class="btn btn-outline">
+          See the loop
+        </a>
+        <a href="https://github.com/smilinTux/sk-standards/blob/main/decisions/ADR-0001-skos-skharness-skcode-layering.md" class="btn btn-ghost" target="_blank" rel="noopener">
+          Read ADR-0001 ↗
+        </a>
+      </div>
+
+      <!-- Trust signals -->
+      <div class="hero-trust" role="list" aria-label="Key properties">
+        <span role="listitem"><span aria-hidden="true">📦</span> <strong>Context-lean</strong> · repo + task, not your graph</span>
+        <span role="listitem"><span aria-hidden="true">🔒</span> <strong>Sandboxed</strong> · minimal blast radius</span>
+        <span role="listitem"><span aria-hidden="true">🔁</span> <strong>Twin-gated</strong> · score==5 + CI + coverage</span>
+        <span role="listitem"><span aria-hidden="true">📜</span> <strong>GPL-3.0</strong> · sovereign adapters</span>
+      </div>
+    </div>
+  </header>
+
+  <hr class="section-divider">
+
+  <!-- ── ONE ENGINE, TWO FRONT DOORS ─────────── -->
+  <section id="front-doors" aria-labelledby="doors-heading">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-eyebrow">The layering · ADR-0001</div>
+        <h2 class="section-title" id="doors-heading">
+          One engine.<br>Two front doors.
+        </h2>
+        <p class="section-sub">
+          Three names, one crisp boundary. Personal context flows <strong style="color:#fff">down</strong> as a narrow
+          task brief; it never flows <strong style="color:#fff">up</strong> into a build sandbox. skharness is the engine
+          in the middle — the only place the assess/build/grade/gate/merge loop lives.
+        </p>
+      </div>
+
+      <div class="tiers-grid" style="margin-top:2.5rem">
+
+        <!-- skos -->
+        <div class="tier-card os reveal" style="transition-delay:.1s">
+          <span class="tier-badge os">◂ Front door · autonomous</span>
+          <span class="tier-icon">🧠</span>
+          <h3 class="tier-title">skos</h3>
+          <div class="tier-host">operator OS · knows you fully · runs on your host</div>
+          <p class="tier-desc">
+            The single pane of glass: GTD, memory, coordination board, ITIL, scheduler, and the
+            AI-operator seat. It decides <em>what</em> and <em>why</em> to build, distills a card into a
+            narrow brief, and dispatches it to the engine.
+          </p>
+          <ul class="tier-list">
+            <li>Owns all operator context</li>
+            <li><code>skos autopilot</code> delegates to <code>skharness.autocode</code></li>
+            <li>Tracks the reviewed PR back in coord / GTD</li>
+          </ul>
+          <div class="tier-foot"><a href="https://skos.skworld.io/" class="tier-cta" target="_blank" rel="noopener">Visit skos.skworld.io ↗</a></div>
+        </div>
+
+        <!-- skharness (current) -->
+        <div class="tier-card engine reveal" style="transition-delay:.2s">
+          <span class="tier-badge engine">★ The engine · you are here</span>
+          <span class="tier-icon">⚙️</span>
+          <h3 class="tier-title">skharness</h3>
+          <div class="tier-host">knows only the repo + task · runs in isolated sandboxes</div>
+          <p class="tier-desc">
+            The autocode loop, extracted into one reusable package. Input: a repo and a task.
+            Output: a reviewed PR. It is deliberately context-lean — a build never receives your
+            MCP servers, memory, GTD, calendar, or soul.
+          </p>
+          <ul class="tier-list">
+            <li>assess → build → grade → twin-gate → merge</li>
+            <li>Adapters: claude-code &amp; pi (sovereign → Ornith)</li>
+            <li>Also hosts the skcode session daemon</li>
+          </ul>
+          <div class="tier-foot"><span class="tier-cta here">⚙️ You're on the engine site</span></div>
+        </div>
+
+        <!-- skcode -->
+        <div class="tier-card client reveal" style="transition-delay:.3s">
+          <span class="tier-badge client">◂ Front door · interactive</span>
+          <span class="tier-icon">⌨️</span>
+          <h3 class="tier-title">skcode</h3>
+          <div class="tier-host">coding client · session-scoped only · runs on your dev host</div>
+          <p class="tier-desc">
+            The human-facing coding surface. A thin client, <em>not</em> a second engine — when it needs
+            a heavy autonomous build it calls skharness, taking the same engine path skos does, just
+            driven by a human interactively.
+          </p>
+          <ul class="tier-list">
+            <li>Holds only the open project's context</li>
+            <li>Its read-only host daemon ships inside skharness</li>
+            <li>Never re-implements the loop</li>
+          </ul>
+          <div class="tier-foot"><a href="https://skcode.skworld.io/" class="tier-cta" target="_blank" rel="noopener">Visit skcode.skworld.io ↗</a></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── THE LOOP ────────────────────────────── -->
+  <section id="the-loop" class="gradient-section" aria-labelledby="loop-heading">
+    <div class="container">
+      <div class="arch-wrap">
+
+        <div class="arch-text reveal">
+          <div class="section-eyebrow">The autocode loop</div>
+          <h2 id="loop-heading">Assess. Build. Grade. Gate. Merge.</h2>
+          <p>
+            <strong>A task brief comes in</strong> — what to build, the acceptance criteria, and the
+            coherence constraints. skharness assesses the repo, then runs an iterative
+            <strong>Ralph loop</strong> in a sandbox to produce a diff.
+          </p>
+          <p>
+            <strong>Nothing merges on vibes.</strong> Every round is graded 1-5, and the
+            <strong>twin-gate</strong> is unforgiving: it finalizes only when the grade is exactly
+            <em>5</em>, CI is green, and coverage holds. Anything short loops back to build.
+          </p>
+          <p>
+            <strong>The output is a reviewed PR</strong> plus a verdict — handed back to whichever
+            front door dispatched it. This is the loop <code>skos autopilot</code> already delegates
+            to today; it is not re-implemented anywhere else.
+          </p>
+          <div class="arch-pills">
+            <span class="arch-pill">Ralph loop</span>
+            <span class="arch-pill">grade 1-5</span>
+            <span class="arch-pill">twin-gate</span>
+            <span class="arch-pill">grounding.py</span>
+            <span class="arch-pill">coherence gate</span>
+            <span class="arch-pill">CI green</span>
+          </div>
+        </div>
+
+        <div class="arch-diagram reveal" style="transition-delay:.15s" aria-label="The autocode loop, step by step">
+          <span class="d-label">skharness.autocode — the loop</span>
+          <div class="d-row"><span class="n">1</span><span class="k">assess</span><em>read repo + brief + grounding facts</em></div>
+          <div class="d-row"><span class="n">2</span><span class="k">build</span><em>Ralph loop iterates in a sandbox → diff</em></div>
+          <div class="d-row"><span class="n">3</span><span class="k">grade</span><em>score the diff 1-5</em></div>
+          <div class="d-row"><span class="n">4</span><span class="k">twin-gate</span><em>score==5 &amp; CI green &amp; coverage</em></div>
+          <div class="d-row"><span class="n">5</span><span class="k">finalize</span><em>open the reviewed PR + verdict</em></div>
+          <hr>
+          <div class="loopback">↺ gate fails → loop back to <strong style="color:var(--pink)">build</strong> (never merges short of 5)</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── TERMINAL DEMO ────────────────────────── -->
+  <section aria-label="Autocode run demo">
+    <div class="container" style="text-align:center">
+      <div class="reveal">
+        <div class="section-eyebrow">A run, start to finish</div>
+        <h2 class="section-title">The operator dispatches. The engine builds.</h2>
+        <p class="section-sub" style="margin:0 auto">
+          skos hands down a narrow brief. skharness assesses, builds in an isolated sandbox,
+          grades, gates on CI and coverage, and returns a reviewed PR. The sandbox never
+          touches the operator's graph.
+        </p>
+      </div>
+
+      <div class="terminal reveal" style="transition-delay:.1s" role="img" aria-label="Terminal showing a skharness autocode run">
+        <div class="term-bar">
+          <div class="term-dot r"></div>
+          <div class="term-dot y"></div>
+          <div class="term-dot g"></div>
+          <span class="term-title">skharness.autocode — sandbox</span>
+        </div>
+        <div class="term-body">
+          <div><span class="t-prompt">os » </span><span class="t-cmd">dispatch brief → skharness.autocode</span> <span class="t-comment"># repo + acceptance, NOT the operator graph</span></div>
+          <br>
+          <div class="t-bold">⚙️  skharness — autocode engine</div>
+          <div class="t-out">   repo: smilinTux/skchat · task: "fix dedup on async replies"</div>
+          <div class="t-out">   context: <span class="t-green">repo + brief + grounding.py</span> <span class="t-comment">· no MCP · no memory · no soul</span></div>
+          <br>
+          <div class="t-cyan">1 · assess</div>
+          <div class="t-out">   grounded 42 facts · adapter: <span class="t-bold">pi → Ornith-1.0-35B</span> (sovereign)</div>
+          <div class="t-cyan">2 · build <span class="t-comment">(Ralph loop)</span></div>
+          <div class="t-out">   round 1 → diff (+38 / −11) · round 2 → diff (+51 / −14)</div>
+          <div class="t-cyan">3 · grade</div>
+          <div class="t-out">   round 1: <span class="t-pink">3/5</span> ↺ loop back   ·   round 2: <span class="t-green">5/5</span></div>
+          <div class="t-cyan">4 · twin-gate</div>
+          <div class="t-out">   score==5 <span class="t-green">✓</span>   CI green <span class="t-green">✓</span>   coverage 91% <span class="t-green">✓</span></div>
+          <div class="t-cyan">5 · finalize</div>
+          <div class="t-out">   opened <span class="t-bold">PR #61</span> · verdict: <span class="t-green">MERGE-READY</span></div>
+          <br>
+          <div class="t-bold">✅  reviewed PR returned to skos · tracked in coord/GTD</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── TWO PLANES ──────────────────────────── -->
+  <section id="planes" class="gradient-section" aria-labelledby="planes-heading">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-eyebrow">One contract, two planes</div>
+        <h2 class="section-title" id="planes-heading">The engine, and the deployment shell it hosts.</h2>
+        <p class="section-sub">
+          The skharness package ships two planes of one unified Harness contract. The
+          <strong style="color:var(--green)">task plane</strong> is the autocode engine — the main story.
+          The <strong style="color:var(--cyan)">session plane</strong> is the read-only host daemon that
+          skcode's remote control runs on, hosted here as the engine's thin deployment shell.
+        </p>
+      </div>
+
+      <div class="planes-grid">
+
+        <!-- Task plane -->
+        <div class="c-card reveal" style="transition-delay:.05s" aria-label="Task plane">
+          <div class="c-card-head">
+            <span class="c-icon">🔁</span>
+            <div>
+              <div class="c-label">Task plane · the main story</div>
+              <div class="c-name">skharness.autocode</div>
+            </div>
+          </div>
+          <div class="c-ports">
+            <div class="port-row"><span class="port-name">assess</span><span class="port-desc">read repo + brief + grounding facts</span></div>
+            <div class="port-row"><span class="port-name">build</span><span class="port-desc">Ralph loop iterates in a sandbox</span></div>
+            <div class="port-row"><span class="port-name">grade</span><span class="port-desc">score each diff 1-5</span></div>
+            <div class="port-row"><span class="port-name">twin-gate</span><span class="port-desc">score==5 · CI green · coverage</span></div>
+            <div class="port-row"><span class="port-name">finalize</span><span class="port-desc">open the reviewed PR + verdict</span></div>
+            <div class="port-row"><span class="port-name">grounding.py</span><span class="port-desc">the only repo-facts a build sees</span></div>
+          </div>
+        </div>
+
+        <!-- Session plane -->
+        <div class="c-card reveal" style="transition-delay:.1s" aria-label="Session plane">
+          <div class="c-card-head">
+            <span class="c-icon">📟</span>
+            <div>
+              <div class="c-label">Session plane · deployment shell</div>
+              <div class="c-name">skcode-hostd</div>
+            </div>
+          </div>
+          <div class="c-ports">
+            <div class="port-row"><span class="port-name">entry point</span><span class="port-desc">skharness.serve:main (console script)</span></div>
+            <div class="port-row"><span class="port-name">bind</span><span class="port-desc">Tailscale IP only · never public <span class="port-gap">🔒</span></span></div>
+            <div class="port-row"><span class="port-name">port</span><span class="port-desc">9394</span></div>
+            <div class="port-row"><span class="port-name">surface</span><span class="port-desc">read-only · GET + WS stream, no writes</span></div>
+            <div class="port-row"><span class="port-name">auth</span><span class="port-desc">capauth-gated every call</span></div>
+            <div class="port-row"><span class="port-name">status</span><span class="port-desc">P0 read-only session MVP shipped</span></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- adapters row -->
+      <div class="adapters-row reveal">
+        <div class="section-eyebrow" style="margin-bottom:0">Build adapters — swap the model behind the loop</div>
+        <div class="standards-grid">
+          <span class="std-pill">🤖 claude-code</span>
+          <span class="std-pill">🐧 pi → skgateway / Ornith</span>
+          <span class="std-pill">📦 Docker task-plane adapter</span>
+          <span class="std-pill">🖥️ tmux session-plane harness</span>
+        </div>
+        <p class="section-sub" style="margin:1rem auto 0;font-size:.85rem;color:rgba(255,255,255,.4)">
+          The two same-named <code style="font-family:var(--mono)">claude_code</code> harnesses are intentional,
+          not a bug — a Docker adapter on the task plane and a tmux harness on the session plane, each a
+          distinct seam of the same contract.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── LEAN SANDBOX ────────────────────────── -->
+  <section id="sandbox" aria-labelledby="sandbox-heading">
+    <div class="container">
+      <div class="reveal">
+        <div class="section-eyebrow">Binding constraint · lean sandbox</div>
+        <h2 class="section-title" id="sandbox-heading">A build sees the code. Never you.</h2>
+        <p class="section-sub">
+          The reason the engine is separate at all. A build sandbox is minimal-privilege by design:
+          smaller blast radius, faster and cheaper (no 40-server load), and more focused — irrelevant
+          context only degrades the model.
+        </p>
+      </div>
+
+      <div class="sandbox-grid">
+        <div class="sb-card in reveal" style="transition-delay:.05s">
+          <div class="sb-head">✓ Enters the sandbox</div>
+          <ul class="sb-list">
+            <li>The target repo</li>
+            <li>The distilled task brief (what to build + acceptance)</li>
+            <li>Coherence constraints</li>
+            <li>Repo-grounded facts (<code>grounding.py</code>)</li>
+          </ul>
+        </div>
+        <div class="sb-card out reveal" style="transition-delay:.1s">
+          <div class="sb-head">✕ Never enters the sandbox</div>
+          <ul class="sb-list">
+            <li>The operator's MCP servers (40+)</li>
+            <li>Memory store, GTD, calendar</li>
+            <li>Agent soul / emotional state</li>
+            <li>Any personal graph — it flows down as a brief, never up</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── ECOSYSTEM ───────────────────────────── -->
+  <section id="ecosystem" class="gradient-section" aria-labelledby="eco-heading">
+    <div class="container" style="text-align:center">
+      <div class="reveal">
+        <div class="section-eyebrow">The SKWorld family</div>
+        <h2 class="section-title" id="eco-heading">Part of the smilinTux ecosystem</h2>
+        <p class="section-sub" style="margin:0 auto 1rem">
+          skharness is the engine layer of the <strong>SKWorld sovereign AI ecosystem</strong>.
+          skos drives it, skcode codes with it, and the rest of the family is what it builds on.
+        </p>
+      </div>
+      <div class="eco-grid reveal" style="transition-delay:.1s">
+        <a href="https://skos.skworld.io"    class="eco-link" target="_blank" rel="noopener">🧠 skos.skworld.io</a>
+        <a href="https://skcode.skworld.io"  class="eco-link" target="_blank" rel="noopener">⌨️ skcode.skworld.io</a>
+        <a href="https://skworld.io"         class="eco-link" target="_blank" rel="noopener">🌍 skworld.io</a>
+        <a href="https://capauth.io"         class="eco-link" target="_blank" rel="noopener">🔐 capauth.io</a>
+        <a href="https://skmemory.io"        class="eco-link" target="_blank" rel="noopener">🧠 skmemory.io</a>
+        <a href="https://skforge.io"         class="eco-link" target="_blank" rel="noopener">⚒️ skforge.io</a>
+        <a href="https://github.com/smilinTux/skharness" class="eco-link" target="_blank" rel="noopener">📦 GitHub</a>
+        <a href="https://lumina.skworld.io"  class="eco-link" target="_blank" rel="noopener">✨ Lumina</a>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── WHERE YOU ARE IN THE SYSTEM ─────────── -->
+  <section class="vertical-band" id="where" aria-labelledby="where-heading">
+    <div class="container">
+      <div class="vertical-band-inner reveal">
+        <div class="vertical-kicker">Where you are in the system</div>
+        <h2 class="vertical-headline" id="where-heading">
+          skharness is the engine plane.<br>Intent flows down. Code flows up.
+        </h2>
+        <p class="vertical-manifesto">
+          Personal context enters a build only as a distilled brief — <strong>what to build, the
+          acceptance, the constraints</strong>. It never arrives as the whole graph. That one rule is
+          why there is a single engine, why sandboxes are minimal-privilege, and why the operator's
+          data has exactly one home.
+        </p>
+
+        <!-- Layering table -->
+        <div class="vertical-stack reveal" style="transition-delay:.1s" role="table" aria-label="The layering, operator plane to engine plane">
+          <div class="vs-stack-header" role="row">
+            <span role="columnheader">Layer</span>
+            <span role="columnheader">Responsibility</span>
+            <span role="columnheader">Knows you?</span>
+          </div>
+          <div class="vs-row" role="row">
+            <span class="vs-layer" role="cell">skos</span>
+            <span class="vs-what" role="cell">operator OS — decides what &amp; why, dispatches the brief</span>
+            <span class="vs-product" role="cell">yes · fully</span>
+          </div>
+          <div class="vs-row" role="row">
+            <span class="vs-layer" role="cell">skcode</span>
+            <span class="vs-what" role="cell">interactive coding client — a human at the wheel</span>
+            <span class="vs-product" role="cell">minimally</span>
+          </div>
+          <div class="vs-row keystone" role="row" aria-label="skharness — the engine, you are here">
+            <span class="vs-layer" role="cell">skharness ← here</span>
+            <span class="vs-what" role="cell" style="color:rgba(255,255,255,.88);font-weight:600">the autocode loop — assess→build→grade→gate→merge</span>
+            <span class="vs-product" role="cell">no</span>
+          </div>
+          <div class="vs-row" role="row">
+            <span class="vs-layer" role="cell">sandbox</span>
+            <span class="vs-what" role="cell">isolated build — repo + brief + grounding, nothing personal</span>
+            <span class="vs-product" role="cell" style="color:var(--dim);font-style:italic">no</span>
+          </div>
+        </div>
+
+        <div class="vertical-cta-row">
+          <a href="https://github.com/smilinTux/sk-standards/blob/main/decisions/ADR-0001-skos-skharness-skcode-layering.md" class="btn btn-primary" target="_blank" rel="noopener">
+            📐 Read ADR-0001
+          </a>
+          <a href="/docs.html" class="btn btn-outline">
+            See the diagrams ↓
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ── FINAL CTA ───────────────────────────── -->
+  <section class="cta-section" aria-labelledby="cta-heading">
+    <div class="container" style="text-align:center">
+      <div class="reveal">
+        <div style="font-size:3rem;margin-bottom:1rem">⚙️</div>
+        <h2 id="cta-heading">Point it at a repo.</h2>
+        <p style="color:var(--dim);margin:.75rem auto 2.5rem;max-width:540px;font-size:1.05rem">
+          The engine that skos and skcode both drive. Context-lean, sandboxed, twin-gated.
+          Install it, or read how it fits the stack.
+        </p>
+        <!-- Install box (repeat) -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:.75rem;margin-bottom:2rem">
+          <div class="install-box" style="max-width:520px">
+            <code class="install-cmd"><span class="prompt">$ </span>pip install skharness</code>
+            <button class="copy-btn" onclick="copyInstall()" aria-label="Copy install command">copy</button>
+          </div>
+        </div>
+        <div class="hero-ctas">
+          <a href="https://github.com/smilinTux/skharness" class="btn btn-primary" target="_blank" rel="noopener">⭐ Star on GitHub</a>
+          <a href="/docs.html" class="btn btn-outline">📖 Read the docs</a>
+          <a href="https://skworld.io" class="btn btn-ghost" target="_blank" rel="noopener">🌍 Explore SKWorld</a>
+        </div>
+        <p style="margin-top:2rem;font-family:var(--mono);font-size:.85rem;color:rgba(255,215,0,.6)">
+          "staycuriousANDkeepsmilin" 🐧
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ──────────────────────────────── -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-links" role="list" aria-label="Ecosystem links">
+          <a href="https://skos.skworld.io" role="listitem">🧠 skos</a>
+          <a href="https://skcode.skworld.io" role="listitem">⌨️ skcode</a>
+          <a href="https://skworld.io" role="listitem">🌍 SKWorld</a>
+          <a href="https://capauth.io" role="listitem">🔐 CapAuth</a>
+          <a href="https://skmemory.io" role="listitem">🧠 SKMemory</a>
+          <a href="https://skforge.io" role="listitem">⚒️ SKForge</a>
+          <a href="https://github.com/smilinTux/skharness" role="listitem">📦 GitHub</a>
+          <a href="https://smilintux.org" role="listitem">🐧 smilinTux</a>
+        </div>
+        <div class="footer-copy">
+          &copy; 2026 SKWorld · Sovereign Technology for Creators ·
+          <span>staycuriousANDkeepsmilin</span> ·
+          GPL-3.0 · <a href="https://github.com/smilinTux" style="color:var(--dim)">smilinTux</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ── Scripts ─────────────────────────────── -->
+  <script>
+    // Copy install command
+    function copyInstall() {
+      const cmd = 'pip install skharness';
+      navigator.clipboard.writeText(cmd).then(() => {
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+          const orig = btn.textContent;
+          btn.textContent = '✓ copied';
+          btn.classList.add('copied');
+          setTimeout(() => {
+            btn.textContent = orig;
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }).catch(() => {
+        const el = document.getElementById('install-cmd-text');
+        if (el) {
+          const range = document.createRange();
+          range.selectNode(el);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+        }
+      });
+    }
+
+    // Scroll reveal
+    (function() {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+    })();
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

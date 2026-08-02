@@ -1,0 +1,94 @@
+# skharness — The Autocode Engine
+
+> Give it a repo and a task; it runs the loop — assess → build → grade 1-5 → twin-gate (score==5 + CI green + coverage) → finalize/merge — in a lean, sandboxed context, and hands back a reviewed PR. One engine, two front doors. GPL-3.0.
+
+skharness is the single autocode engine of the smilinTux / SKWorld ecosystem. Its input is
+a repo plus a task; its output is a reviewed PR. It is deliberately **context-lean**: a build
+sandbox receives only the target repo, the distilled task brief (what to build + acceptance +
+coherence constraints), and repo-grounded facts (`grounding.py`). It never receives the
+operator's MCP servers, memory store, GTD, calendar, or agent soul. That single rule — personal
+context flows DOWN as a narrow brief, never UP into a build — is why there is one engine and why
+its sandboxes are minimal-privilege, fast, and focused.
+
+## Install
+
+```sh
+pip install skharness
+```
+
+Package `skharness` on PyPI (v0.3.1), Python 3.10+, GPL-3.0. The package also exposes the
+`skcode-hostd` console script (`skharness.serve:main`).
+
+## The one-line rule (ADR-0001)
+
+> skos knows you. skharness builds code. skcode is where you code by hand.
+
+skharness is the engine that both front doors drive:
+
+- **skos** (operator OS, https://skos.skworld.io) — knows the operator fully. Decides *what* and
+  *why* to build, distills a card into a narrow brief, and dispatches it. `skos autopilot` already
+  delegates to `skharness.autocode`.
+- **skcode** (coding client, https://skcode.skworld.io) — the interactive, human-facing surface.
+  A thin client, not a second engine; it calls skharness for heavy autonomous builds and takes the
+  same engine path skos does, just driven by a human.
+
+## The autocode loop
+
+1. **assess** — read the repo, the brief, and the grounding facts.
+2. **build** — an iterative *Ralph loop* runs in an isolated sandbox and produces a diff.
+3. **grade** — each diff is scored 1-5.
+4. **twin-gate** — finalize only when score == 5 AND CI is green AND coverage holds. Anything
+   short loops back to build. Nothing merges on vibes.
+5. **finalize / merge** — open the reviewed PR plus a verdict, returned to the front door that
+   dispatched the task.
+
+## Two planes of one Harness contract
+
+The skharness package ships two planes:
+
+- **Task plane — the autocode engine** (`skharness.autocode`): assess → build → grade → twin-gate →
+  finalize/merge. This is the main story.
+- **Session plane — the skcode host daemon** (`skcode-hostd`, entry point `skharness.serve:main`):
+  a read-only remote-control daemon over the session plane. Binds to a Tailscale IP only (never a
+  public port), port 9394, capauth-gated on every call, no write surface. The P0 read-only session
+  MVP is shipped. skharness intentionally hosts skcode's daemon as its thin deployment shell.
+
+## Build adapters
+
+- **claude-code** — Anthropic Claude Code adapter.
+- **pi** — sovereign adapter routing through skgateway to a local Ornith model (cloud-free).
+
+The two same-named `claude_code` harnesses in the repo are intentional, not a bug: a Docker
+adapter on the task plane and a tmux harness on the session plane — two distinct seams of the same
+unified contract.
+
+## The lean sandbox — the binding constraint
+
+Enters a build: the target repo · the task brief (what + acceptance) · coherence constraints ·
+repo-grounded facts (`grounding.py`).
+
+Never enters a build: the operator's 40+ MCP servers · memory store · GTD · calendar · agent soul ·
+any personal graph.
+
+Rationale: security (minimal blast radius), speed and cost (no 40-server load), and focus
+(irrelevant context degrades the model).
+
+## Links
+
+- [Live site](https://skharness.skworld.io)
+- [GitHub repo](https://github.com/smilinTux/skharness)
+- [PyPI](https://pypi.org/project/skharness/)
+- [ADR-0001 — the layering](https://github.com/smilinTux/sk-standards/blob/main/decisions/ADR-0001-skos-skharness-skcode-layering.md)
+- [skos — operator OS](https://skos.skworld.io)
+- [skcode — coding client](https://skcode.skworld.io)
+- [SKWorld ecosystem](https://skworld.io)
+
+## About smilinTux
+
+skharness is part of the **smilinTux sovereign AI ecosystem** — a suite of open-source tools built
+by King Divad (Chef/David) and Lumina to give humans and AI agents genuine, authentic
+infrastructure they can own and trust. No corporate robotics. No black-box clouds. GPL-3.0 forever.
+
+Other ecosystem projects: [skos](https://skos.skworld.io) · [skcode](https://skcode.skworld.io) ·
+[SKWorld](https://skworld.io) · [CapAuth](https://capauth.io) · [SKMemory](https://skmemory.io) ·
+[SKForge](https://skforge.io)
