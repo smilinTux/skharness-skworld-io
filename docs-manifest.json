@@ -2,12 +2,12 @@
   "repo": "smilinTux/skharness",
   "branch": "main",
   "path": "docs",
-  "generated": "2026-08-02",
-  "note": "Committed fallback for the /docs viewer when the GitHub Contents API is unavailable or rate-limited (or the engine repo is private). Regenerate from: python .github/scripts/docs-manifest-gen.py smilinTux/skharness --out docs-manifest.json",
+  "generated": "2026-08-14",
+  "note": "Committed fallback for the /docs viewer when the GitHub Contents API is unavailable or rate-limited. Regenerate from: python docs-manifest-gen.py smilinTux/skharness --out docs-manifest.json",
   "docs": [
     {
       "name": "AUDIT-quality-and-integration-2026-07-25.md",
-      "title": "skharness — Quality & Integration Audit"
+      "title": "skharness Audit: Quality/Validation Discipline + skcode Integration"
     }
   ]
 }
