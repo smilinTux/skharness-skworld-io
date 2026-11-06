@@ -384,6 +384,7 @@
         <li><a href="/#the-loop">The loop</a></li>
         <li><a href="/#planes">Two planes</a></li>
         <li><a href="/#sandbox">Lean sandbox</a></li>
+        <li><a href="/docs.html#system-map">Architecture</a></li>
         <li><a href="/docs.html" class="active">Docs</a></li>
         <li><a href="https://skworld.io">SKWorld</a></li>
         <li><a href="https://github.com/smilinTux/skharness" target="_blank" rel="noopener">GitHub</a></li>
@@ -413,7 +414,7 @@
       <a href="/" class="doc-back">← skharness home</a>
 
       <!-- STATIC SYSTEM MAP: the two ADR-0001 diagrams (where you are in the system) -->
-      <section class="system-map" aria-label="Where skharness sits in the system">
+      <section class="system-map" id="system-map" aria-label="Where skharness sits in the system">
         <div class="sm-kicker">Where you are in the system · ADR-0001</div>
         <h2>One engine, two front doors</h2>
         <p class="sm-sub">
@@ -434,6 +435,10 @@
         <p class="sm-src">
           Source of truth:
           <a href="https://github.com/smilinTux/sk-standards/blob/main/decisions/ADR-0001-skos-skharness-skcode-layering.md" target="_blank" rel="noopener">ADR-0001 · skos / skharness / skcode layering ↗</a>
+        </p>
+        <p class="sm-src">
+          Full component map: <a href="diagrams/skharness.architecture.html" target="_blank" rel="noopener">open the interactive architecture diagram ↗</a>
+          (skcode-hostd, the autocode engine, and the harness/session plane, derived from SOP.md section 2).
         </p>
       </section>
 
