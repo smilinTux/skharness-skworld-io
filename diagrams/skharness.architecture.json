@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "skharness Component Map",
+    "subtitle": "skcode-hostd, the autocode engine, and the harness/session plane, derived from SOP.md section 2",
+    "output": "skharness.architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "phone", "type": "frontend", "label": "Operator phone / browser", "sublabel": "static client at / and /app", "pos": [40, 40], "size": [200, 64] },
+    { "id": "atlas", "type": "external", "label": "Atlas adapter", "sublabel": "skcapstone skcode_adapter.py", "pos": [280, 40], "size": [200, 64] },
+    { "id": "skos", "type": "external", "label": "skos.autopilot", "sublabel": "shim, delegates to the engine", "pos": [520, 40], "size": [200, 64] },
+
+    { "id": "serve", "type": "backend", "label": "serve.py", "sublabel": "resolve_bind + select_verifier", "pos": [40, 180], "size": [200, 64] },
+    { "id": "daemon", "type": "backend", "label": "daemon.py", "sublabel": "FastAPI routes + ROUTE_SCOPES", "pos": [280, 180], "size": [200, 64] },
+    { "id": "auth", "type": "backend", "label": "auth.py", "sublabel": "require_bearer, AuthContext scopes", "pos": [520, 180], "size": [200, 64] },
+    { "id": "opcli", "type": "backend", "label": "operator_cli.py", "sublabel": "explain / observe / act", "pos": [760, 180], "size": [200, 64] },
+
+    { "id": "verify", "type": "security", "label": "verify_audience_token", "sublabel": "audience = skcode", "pos": [40, 320], "size": [200, 64] },
+    { "id": "pdp", "type": "security", "label": "capauth.authz.decide", "sublabel": "PDP, VERIFIED floor", "pos": [280, 320], "size": [200, 64] },
+
+    { "id": "orch", "type": "backend", "label": "orchestrator.py", "sublabel": "phases 0-3, caps, kill switch", "pos": [40, 460], "size": [200, 64] },
+    { "id": "eng", "type": "backend", "label": "engineering.py", "sublabel": "worktree + sandbox + twin gate", "pos": [280, 460], "size": [200, 64] },
+    { "id": "prot", "type": "backend", "label": "protected.py", "sublabel": "carve-out detector, fail closed", "pos": [520, 460], "size": [200, 64] },
+    { "id": "ci", "type": "backend", "label": "ci.py", "sublabel": "external CI verdict", "pos": [40, 600], "size": [200, 64] },
+    { "id": "doctor", "type": "backend", "label": "doctor.py", "sublabel": "preflight self-check", "pos": [280, 600], "size": [200, 64] },
+
+    { "id": "cc", "type": "backend", "label": "claude_code.py", "sublabel": "tmux adapter + spawn() guard", "pos": [40, 740], "size": [200, 64] },
+    { "id": "store", "type": "database", "label": "session_events.py", "sublabel": "SessionEventStore, append only", "pos": [280, 740], "size": [200, 64] },
+    { "id": "reg", "type": "backend", "label": "autocode/sessions.py", "sublabel": "AutocodeSessionRegistry", "pos": [520, 740], "size": [200, 64] },
+
+    { "id": "skgw", "type": "external", "label": "skgateway bucket pool", "sublabel": "per-call model override", "pos": [40, 880], "size": [200, 64] },
+    { "id": "worktree", "type": "external", "label": "Per-card worktree + sandbox", "sublabel": "dispatch repo allowlist", "pos": [280, 880], "size": [200, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Callers", "wraps": ["phone", "atlas", "skos"] },
+    { "kind": "region", "label": "skcode-hostd (one per host)", "wraps": ["serve", "daemon", "auth", "opcli"] },
+    { "kind": "security-group", "label": "capauth (separate repo)", "wraps": ["verify", "pdp"] },
+    { "kind": "region", "label": "autocode engine (library)", "wraps": ["orch", "eng", "prot", "ci", "doctor"] },
+    { "kind": "region", "label": "Harness / session plane", "wraps": ["cc", "store", "reg"] }
+  ],
+  "connections": [
+    { "id": "phone-daemon", "from": "phone", "to": "daemon", "label": "Bearer / ?token=", "variant": "default" },
+    { "id": "atlas-opcli", "from": "atlas", "to": "opcli", "label": "shells operator_cli", "variant": "default" },
+    { "id": "skos-orch", "from": "skos", "to": "orch", "label": "delegates by object identity", "variant": "default" },
+    { "id": "serve-daemon", "from": "serve", "to": "daemon", "variant": "default" },
+    { "id": "daemon-auth", "from": "daemon", "to": "auth", "variant": "default" },
+    { "id": "auth-verify", "from": "auth", "to": "verify", "variant": "security" },
+    { "id": "daemon-pdp", "from": "daemon", "to": "pdp", "label": "inject / dispatch", "variant": "security" },
+    { "id": "daemon-cc", "from": "daemon", "to": "cc", "variant": "default" },
+    { "id": "daemon-store", "from": "daemon", "to": "store", "variant": "default" },
+    { "id": "daemon-reg", "from": "daemon", "to": "reg", "variant": "default" },
+    { "id": "orch-eng", "from": "orch", "to": "eng", "variant": "default" },
+    { "id": "eng-prot", "from": "eng", "to": "prot", "variant": "default" },
+    { "id": "eng-ci", "from": "eng", "to": "ci", "variant": "default" },
+    { "id": "orch-doctor", "from": "orch", "to": "doctor", "variant": "default" },
+    { "id": "eng-cc", "from": "eng", "to": "cc", "variant": "default" },
+    { "id": "orch-reg", "from": "orch", "to": "reg", "variant": "default" },
+    { "id": "orch-skgw", "from": "orch", "to": "skgw", "label": "work_grade -> bucket id", "variant": "default" },
+    { "id": "skgw-eng", "from": "skgw", "to": "eng", "label": "concrete serving member", "variant": "dashed" },
+    { "id": "cc-worktree", "from": "cc", "to": "worktree", "label": "allowlist, empty = DENY ALL", "variant": "security" }
+  ],
+  "cards": [
+    { "dot": "amber", "title": "Tailnet only", "items": ["No public route: no :443 vhost, no Cloudflare Tunnel, no Funnel", "serve.resolve_bind() refuses a wildcard bind"] },
+    { "dot": "cyan", "title": "Fail-closed gates", "items": ["Missing capauth import falls back to deny-all verification", "Empty SKCODE_DISPATCH_REPOS denies every dispatch", "protected.py fails closed on any manifest load failure"] }
+  ]
+}

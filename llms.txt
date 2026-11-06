@@ -76,6 +76,7 @@ Rationale: security (minimal blast radius), speed and cost (no 40-server load), 
 ## Links
 
 - [Live site](https://skharness.skworld.io)
+- [Interactive architecture diagram](https://skharness.skworld.io/diagrams/skharness.architecture.html)
 - [GitHub repo](https://github.com/smilinTux/skharness)
 - [PyPI](https://pypi.org/project/skharness/)
 - [ADR-0001 — the layering](https://github.com/smilinTux/sk-standards/blob/main/decisions/ADR-0001-skos-skharness-skcode-layering.md)
